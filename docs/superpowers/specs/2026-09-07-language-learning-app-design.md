@@ -100,3 +100,7 @@ Course (ej. "Inglés para hispanohablantes")
 Se instrumenta con una tabla simple de eventos en Supabase o el free tier de una herramienta tipo PostHog — no se justifica infraestructura de analítica más pesada a este tamaño.
 
 **Testing técnico:** la lógica del motor puro (cálculo de SRS, scoring de ejercicios, lógica de entitlements) se cubre con tests automatizados por ser lógica de negocio aislable. La UI se valida con QA manual en ambas plataformas antes de cada release, sin automatización de UI pesada a este tamaño de proyecto.
+
+## 8. Dirección visual
+
+El diseño de UI/UX detallado (pantallas, flujos de navegación) se define pantalla por pantalla durante la implementación, no como una etapa separada previa. Lo único fijado de antemano es la dirección de tema: **Midnight Teal** (paleta oscura con teal como color dominante/de acento). Cualquier decisión visual durante el desarrollo debe partir de esta base para mantener consistencia entre iOS/Android.
