@@ -22,8 +22,10 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-    } catch (_) {
+    } on InvalidCredentialsException {
       setState(() => _errorMessage = 'Correo o contraseña incorrectos');
+    } catch (_) {
+      setState(() => _errorMessage = 'No se pudo conectar. Revisa tu conexión e intenta de nuevo.');
     }
   }
 

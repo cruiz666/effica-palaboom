@@ -4,8 +4,8 @@ import 'package:effica_palaboom/features/auth/auth_repository.dart';
 import 'package:effica_palaboom/features/auth/login_screen.dart';
 
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({this.shouldFail = false});
-  final bool shouldFail;
+  FakeAuthRepository({this.failureMode = FailureMode.none});
+  final FailureMode failureMode;
   String? lastEmail;
   String? lastPassword;
 
@@ -16,9 +16,18 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signIn({required String email, required String password}) async {
     lastEmail = email;
     lastPassword = password;
-    if (shouldFail) throw Exception('invalid credentials');
+    switch (failureMode) {
+      case FailureMode.none:
+        break;
+      case FailureMode.invalidCredentials:
+        throw InvalidCredentialsException();
+      case FailureMode.connectivity:
+        throw Exception('Connection timeout');
+    }
   }
 }
+
+enum FailureMode { none, invalidCredentials, connectivity }
 
 void main() {
   testWidgets('successful login calls signIn with entered credentials', (tester) async {
@@ -35,8 +44,8 @@ void main() {
     expect(find.text('Correo o contraseña incorrectos'), findsNothing);
   });
 
-  testWidgets('failed login shows an error message', (tester) async {
-    final repo = FakeAuthRepository(shouldFail: true);
+  testWidgets('failed login shows credential error message', (tester) async {
+    final repo = FakeAuthRepository(failureMode: FailureMode.invalidCredentials);
     await tester.pumpWidget(MaterialApp(home: LoginScreen(authRepository: repo)));
 
     await tester.enterText(find.byKey(const Key('emailField')), 'user@example.com');
@@ -45,5 +54,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Correo o contraseña incorrectos'), findsOneWidget);
+  });
+
+  testWidgets('connectivity error shows network error message', (tester) async {
+    final repo = FakeAuthRepository(failureMode: FailureMode.connectivity);
+    await tester.pumpWidget(MaterialApp(home: LoginScreen(authRepository: repo)));
+
+    await tester.enterText(find.byKey(const Key('emailField')), 'user@example.com');
+    await tester.enterText(find.byKey(const Key('passwordField')), 'secret123');
+    await tester.tap(find.byKey(const Key('loginButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo conectar. Revisa tu conexión e intenta de nuevo.'), findsOneWidget);
   });
 }

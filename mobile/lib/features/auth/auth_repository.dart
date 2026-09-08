@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class InvalidCredentialsException implements Exception {}
+
 abstract class AuthRepository {
   Stream<bool> get authStateChanges;
   Future<void> signIn({required String email, required String password});
@@ -16,6 +18,10 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signIn({required String email, required String password}) async {
-    await _client.auth.signInWithPassword(email: email, password: password);
+    try {
+      await _client.auth.signInWithPassword(email: email, password: password);
+    } on AuthException {
+      throw InvalidCredentialsException();
+    }
   }
 }
