@@ -61,6 +61,7 @@ create table user_lesson_progress (
   completed_at timestamptz not null default now()
 );
 
+alter table languages enable row level security;
 alter table courses enable row level security;
 alter table units enable row level security;
 alter table lessons enable row level security;
@@ -69,23 +70,53 @@ alter table learning_items enable row level security;
 alter table exercise_learning_items enable row level security;
 alter table user_lesson_progress enable row level security;
 
+create policy "Languages are readable by anyone"
+  on languages for select using (true);
+
 create policy "Published courses are readable by anyone"
   on courses for select using (status = 'published');
 
 create policy "Published units are readable by anyone"
   on units for select using (status = 'published');
 
-create policy "Lessons are readable by anyone"
-  on lessons for select using (true);
+create policy "Lessons are readable when their unit is published"
+  on lessons for select
+  using (
+    exists (
+      select 1 from units u
+      where u.id = lessons.unit_id and u.status = 'published'
+    )
+  );
 
-create policy "Exercises are readable by anyone"
-  on exercises for select using (true);
+create policy "Exercises are readable when their lesson's unit is published"
+  on exercises for select
+  using (
+    exists (
+      select 1 from lessons l
+      join units u on u.id = l.unit_id
+      where l.id = exercises.lesson_id and u.status = 'published'
+    )
+  );
 
-create policy "Learning items are readable by anyone"
-  on learning_items for select using (true);
+create policy "Learning items are readable when their course is published"
+  on learning_items for select
+  using (
+    exists (
+      select 1 from courses c
+      where c.id = learning_items.course_id and c.status = 'published'
+    )
+  );
 
-create policy "Exercise learning item links are readable by anyone"
-  on exercise_learning_items for select using (true);
+create policy "Exercise-learning item links are readable when their exercise is published"
+  on exercise_learning_items for select
+  using (
+    exists (
+      select 1 from exercises e
+      join lessons l on l.id = e.lesson_id
+      join units u on u.id = l.unit_id
+      where e.id = exercise_learning_items.exercise_id and u.status = 'published'
+    )
+  );
 
 create policy "Users can view their own progress"
   on user_lesson_progress for select using (auth.uid() = user_id);
