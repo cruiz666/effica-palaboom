@@ -3,6 +3,8 @@ import '../content/content_repository.dart';
 import '../content/models/course.dart';
 import '../lesson/lesson_screen.dart';
 import '../lesson/progress_repository.dart';
+import '../progress/progress_screen.dart';
+import '../progress/progress_summary_repository.dart';
 import '../srs/review_session_screen.dart';
 import '../srs/srs_repository.dart';
 
@@ -12,11 +14,13 @@ class CourseScreen extends StatefulWidget {
     required this.contentRepository,
     required this.progressRepository,
     required this.srsRepository,
+    required this.progressSummaryRepository,
   });
 
   final ContentRepository contentRepository;
   final ProgressRepository progressRepository;
   final SrsRepository srsRepository;
+  final ProgressSummaryRepository progressSummaryRepository;
 
   @override
   State<CourseScreen> createState() => _CourseScreenState();
@@ -44,6 +48,21 @@ class _CourseScreenState extends State<CourseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tu curso'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProgressScreen(
+                  progressSummaryRepository: widget.progressSummaryRepository,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: FutureBuilder<Course>(
         future: _courseFuture,
         builder: (context, snapshot) {

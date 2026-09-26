@@ -6,6 +6,7 @@ import 'features/content/content_cache.dart';
 import 'features/content/content_remote_data_source.dart';
 import 'features/content/content_repository.dart';
 import 'features/lesson/progress_repository.dart';
+import 'features/progress/progress_summary_repository.dart';
 import 'features/srs/srs_repository.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -32,5 +33,6 @@ Future<void> main() async {
     ),
     progressRepository: SupabaseProgressRepository(client),
     srsRepository: SupabaseSrsRepository(client),
+    progressSummaryRepository: SupabaseProgressSummaryRepository(client),
   ));
 }

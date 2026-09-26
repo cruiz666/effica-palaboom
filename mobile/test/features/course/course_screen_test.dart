@@ -7,6 +7,9 @@ import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/progress/progress_screen.dart';
+import 'package:effica_palaboom/features/progress/progress_summary_repository.dart';
+import 'package:effica_palaboom/features/progress/unit_progress_summary.dart';
 import 'package:effica_palaboom/features/srs/review_session_screen.dart';
 import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
@@ -76,6 +79,11 @@ class FakeSrsRepository implements SrsRepository {
   }
 }
 
+class FakeProgressSummaryRepository implements ProgressSummaryRepository {
+  @override
+  Future<List<UnitProgressSummary>> getUnitProgressSummaries() async => const [];
+}
+
 class ThrowingRemoteDataSource implements ContentRemoteDataSource {
   int callCount = 0;
 
@@ -98,6 +106,7 @@ void main() {
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
         srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -124,6 +133,7 @@ void main() {
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
         srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -159,6 +169,7 @@ void main() {
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
         srsRepository: FakeSrsRepository(due: [dueExercise]),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -169,5 +180,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReviewSessionScreen), findsOneWidget);
+  });
+
+  testWidgets('AppBar has a button that opens ProgressScreen', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.bar_chart));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProgressScreen), findsOneWidget);
   });
 }

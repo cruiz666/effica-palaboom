@@ -9,6 +9,8 @@ import 'package:effica_palaboom/features/content/content_repository.dart';
 import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/progress/progress_summary_repository.dart';
+import 'package:effica_palaboom/features/progress/unit_progress_summary.dart';
 import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -57,6 +59,11 @@ class FakeSrsRepository implements SrsRepository {
   }
 }
 
+class FakeProgressSummaryRepository implements ProgressSummaryRepository {
+  @override
+  Future<List<UnitProgressSummary>> getUnitProgressSummaries() async => const [];
+}
+
 void main() {
   testWidgets('shows LoginScreen when signed out and CourseScreen when signed in', (tester) async {
     final authRepository = FakeAuthRepository();
@@ -69,6 +76,7 @@ void main() {
       ),
       progressRepository: FakeProgressRepository(),
       srsRepository: FakeSrsRepository(),
+      progressSummaryRepository: FakeProgressSummaryRepository(),
     ));
 
     authRepository.emit(false);
