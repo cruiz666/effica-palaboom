@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../content/models/lesson.dart';
-import 'widgets/multiple_choice_exercise.dart';
+import 'exercise_widget_factory.dart';
 import 'progress_repository.dart';
 
 class LessonScreen extends StatefulWidget {
@@ -93,8 +93,7 @@ class _LessonScreenState extends State<LessonScreen> {
     final exercise = widget.lesson.exercises[_currentIndex];
     return Scaffold(
       appBar: AppBar(title: Text(widget.lesson.title)),
-      body: MultipleChoiceExercise(
-        key: ValueKey(exercise.id),
+      body: buildExerciseWidget(
         exercise: exercise,
         onAnswered: (correct) {
           _onAnswered(correct);
