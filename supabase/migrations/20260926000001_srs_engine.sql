@@ -148,12 +148,16 @@ as $$
     where l.unit_id = u.id and ulp.user_id = auth.uid()
   ) progress_counts on true
   left join lateral (
-    select count(*) as total_items from public.learning_items li where li.course_id = c.id
+    select count(distinct eli.learning_item_id) as total_items
+    from public.exercise_learning_items eli
+    join public.exercises e on e.id = eli.exercise_id
+    join public.lessons l on l.id = e.lesson_id
+    where l.unit_id = u.id
   ) item_counts on true
   left join lateral (
     select
-      count(*) filter (where uilp.repetitions >= 2) as learned_items,
-      count(*) filter (where uilp.next_review_date <= current_date) as due_today_items
+      count(distinct uilp.learning_item_id) filter (where uilp.repetitions >= 2) as learned_items,
+      count(distinct uilp.learning_item_id) filter (where uilp.next_review_date <= current_date) as due_today_items
     from public.user_learning_item_progress uilp
     join public.exercise_learning_items eli on eli.learning_item_id = uilp.learning_item_id
     join public.exercises e on e.id = eli.exercise_id
