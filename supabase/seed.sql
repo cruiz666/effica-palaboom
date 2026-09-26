@@ -28,3 +28,19 @@ insert into exercises (id, lesson_id, sort_order, type, content, correct_answer)
 insert into exercise_learning_items (exercise_id, learning_item_id) values
   ('77777777-7777-7777-7777-777777777777', '55555555-5555-5555-5555-555555555555'),
   ('88888888-8888-8888-8888-888888888888', '66666666-6666-6666-6666-666666666666');
+
+insert into learning_items (id, course_id, item_type, value, translation) values
+  ('99999999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', 'vocab', 'name', 'nombre'),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'grammar', 'My name is', 'Me llamo');
+
+insert into exercises (id, lesson_id, sort_order, type, content, correct_answer) values
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '44444444-4444-4444-4444-444444444444', 1, 'fill_blank',
+   '{"prompt": "What is your ___?", "options": ["name", "goodbye", "please"]}'::jsonb,
+   '"name"'::jsonb),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '44444444-4444-4444-4444-444444444444', 2, 'word_order',
+   '{"words": ["is", "My", "Ana", "name"]}'::jsonb,
+   '"My name is Ana"'::jsonb);
+
+insert into exercise_learning_items (exercise_id, learning_item_id) values
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '99999999-9999-9999-9999-999999999999'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
