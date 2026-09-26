@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:effica_palaboom/features/auth/auth_repository.dart';
 import 'package:effica_palaboom/features/auth/login_screen.dart';
 
@@ -22,7 +23,10 @@ class FakeAuthRepository implements AuthRepository {
       case FailureMode.invalidCredentials:
         throw InvalidCredentialsException();
       case FailureMode.connectivity:
-        throw Exception('Connection timeout');
+        // Real SDK type for network failures/timeouts, so this fake mirrors
+        // gotrue's actual exception hierarchy (AuthRetryableFetchException
+        // extends AuthException).
+        throw AuthRetryableFetchException(message: 'Connection timeout');
     }
   }
 }
