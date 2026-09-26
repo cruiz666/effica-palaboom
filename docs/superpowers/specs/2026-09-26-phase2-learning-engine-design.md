@@ -73,7 +73,9 @@ Una función SQL `get_due_learning_items()` devuelve, para el usuario autenticad
 
 ## 5. Integración: sección de Repaso y pantalla de progreso
 
-**Sección "Repaso":** en `CourseScreen`, sobre las unidades/lecciones fijas, una tarjeta muestra cuántos ítems tocan hoy (ej. "5 para repasar"). Si hay al menos uno, es tocable y abre una sesión tipo `LessonScreen`, pero armada dinámicamente a partir de `get_due_learning_items()` en vez de una lección fija — reutiliza el mismo motor de ejercicios y lógica de secuencia/score; al responder cada ejercicio, además actualiza el estado SRS del `LearningItem` vía `submitReviewResult`. Sin ítems vencidos, la tarjeta muestra "Sin repasos pendientes hoy" y no es tocable.
+**Cuándo se actualiza el estado SRS:** en cualquier ejercicio que el usuario responda, sea de una lección fija (Fase 1) o de una sesión de Repaso — no solo en Repaso. Esto es lo que le da a cada `LearningItem` su primera fecha de repaso (al aparecer por primera vez en una lección normal) y mantiene el estado actualizado de ahí en más. Implica una modificación pequeña a `LessonScreen` (ya existente desde la Fase 1): además de lo que ya hace al responder un ejercicio, también llama a `submitReviewResult` por cada `LearningItem` ligado a ese ejercicio.
+
+**Sección "Repaso":** en `CourseScreen`, sobre las unidades/lecciones fijas, una tarjeta muestra cuántos ítems tocan hoy (ej. "5 para repasar"). Si hay al menos uno, es tocable y abre una sesión que reutiliza el mismo motor de ejercicios y lógica de secuencia/score que `LessonScreen`, pero armada dinámicamente a partir de `get_due_learning_items()` en vez de una lección fija. Sin ítems vencidos, la tarjeta muestra "Sin repasos pendientes hoy" y no es tocable.
 
 **Pantalla de progreso:** accesible desde `CourseScreen` (ícono en el AppBar), solo lectura. Por unidad: % de lecciones completadas (ya disponible vía `user_lesson_progress`) y cuántos `LearningItem` de esa unidad están "aprendidos" (`repetitions` ≥ umbral, ej. 2) vs. "pendientes de repaso hoy".
 
