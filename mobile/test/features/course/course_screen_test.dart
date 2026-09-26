@@ -56,6 +56,16 @@ class FakeProgressRepository implements ProgressRepository {
   Future<void> submitLessonResult({required String lessonId, required double score}) async {}
 }
 
+class ThrowingRemoteDataSource implements ContentRemoteDataSource {
+  int callCount = 0;
+
+  @override
+  Future<Map<String, dynamic>> fetchActiveCourse() async {
+    callCount++;
+    throw Exception('network error');
+  }
+}
+
 void main() {
   testWidgets('shows lessons and navigates to LessonScreen on tap', (tester) async {
     final repository = ContentRepository(
@@ -78,5 +88,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LessonScreen), findsOneWidget);
+  });
+
+  testWidgets('a fetch failure shows an error message with a retry affordance instead of '
+      'spinning forever', (tester) async {
+    final dataSource = ThrowingRemoteDataSource();
+    final repository = ContentRepository(
+      remoteDataSource: dataSource,
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('No se pudo cargar el curso.'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Reintentar'), findsOneWidget);
+
+    expect(dataSource.callCount, 1);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reintentar'));
+    await tester.pumpAndSettle();
+
+    expect(dataSource.callCount, 2);
+    expect(find.text('No se pudo cargar el curso.'), findsOneWidget);
   });
 }
