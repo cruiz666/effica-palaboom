@@ -4,6 +4,22 @@ import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/content/models/lesson.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/srs/srs_repository.dart';
+
+class FakeSrsRepository implements SrsRepository {
+  final calls = <(String, bool)>[];
+
+  @override
+  Future<int> getDueCount() async => 0;
+
+  @override
+  Future<List<Exercise>> getDueExercises() async => const [];
+
+  @override
+  Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
+    calls.add((learningItemId, correct));
+  }
+}
 
 class FakeProgressRepository implements ProgressRepository {
   FakeProgressRepository({this.shouldThrow = false});
@@ -33,6 +49,7 @@ Lesson _lesson() => const Lesson(
           type: 'multiple_choice',
           content: {'prompt': 'Hola?', 'options': ['Hello', 'Goodbye']},
           correctAnswer: 'Hello',
+          learningItemIds: ['li-1'],
         ),
         Exercise(
           id: 'ex-2',
@@ -40,6 +57,7 @@ Lesson _lesson() => const Lesson(
           type: 'multiple_choice',
           content: {'prompt': 'Adiós?', 'options': ['Hello', 'Goodbye']},
           correctAnswer: 'Goodbye',
+          learningItemIds: ['li-2'],
         ),
       ],
     );
@@ -47,8 +65,9 @@ Lesson _lesson() => const Lesson(
 void main() {
   testWidgets('completing all exercises submits the score and shows completion', (tester) async {
     final progressRepo = FakeProgressRepository();
+    final srsRepo = FakeSrsRepository();
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo),
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo),
     ));
 
     await tester.tap(find.text('Hello'));
@@ -64,6 +83,10 @@ void main() {
     expect(find.widgetWithText(AppBar, 'Saludar y despedirse'), findsOneWidget);
     expect(find.text('2 de 2 correctas'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Volver al curso'), findsOneWidget);
+    expect(srsRepo.calls, [
+      ('li-1', true),
+      ('li-2', true),
+    ]);
   });
 
   testWidgets('opening a lesson with no exercises shows a friendly message instead of crashing',
@@ -76,7 +99,7 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: emptyLesson, progressRepository: FakeProgressRepository()),
+      home: LessonScreen(lesson: emptyLesson, progressRepository: FakeProgressRepository(), srsRepository: FakeSrsRepository()),
     ));
     await tester.pumpAndSettle();
 
@@ -88,7 +111,7 @@ void main() {
       (tester) async {
     final progressRepo = FakeProgressRepository(shouldThrow: true);
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo),
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: FakeSrsRepository()),
     ));
 
     await tester.tap(find.text('Hello'));

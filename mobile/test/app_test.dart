@@ -6,8 +6,10 @@ import 'package:effica_palaboom/features/auth/auth_repository.dart';
 import 'package:effica_palaboom/features/content/content_cache.dart';
 import 'package:effica_palaboom/features/content/content_remote_data_source.dart';
 import 'package:effica_palaboom/features/content/content_repository.dart';
+import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<bool>.broadcast();
@@ -40,6 +42,21 @@ class FakeProgressRepository implements ProgressRepository {
   Future<void> submitLessonResult({required String lessonId, required double score}) async {}
 }
 
+class FakeSrsRepository implements SrsRepository {
+  final calls = <(String, bool)>[];
+
+  @override
+  Future<int> getDueCount() async => 0;
+
+  @override
+  Future<List<Exercise>> getDueExercises() async => const [];
+
+  @override
+  Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
+    calls.add((learningItemId, correct));
+  }
+}
+
 void main() {
   testWidgets('shows LoginScreen when signed out and CourseScreen when signed in', (tester) async {
     final authRepository = FakeAuthRepository();
@@ -51,6 +68,7 @@ void main() {
         cache: FakeContentCache(),
       ),
       progressRepository: FakeProgressRepository(),
+      srsRepository: FakeSrsRepository(),
     ));
 
     authRepository.emit(false);

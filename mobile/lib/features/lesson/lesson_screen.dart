@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../content/models/lesson.dart';
+import '../srs/srs_repository.dart';
 import 'exercise_widget_factory.dart';
 import 'progress_repository.dart';
 
@@ -8,10 +9,12 @@ class LessonScreen extends StatefulWidget {
     super.key,
     required this.lesson,
     required this.progressRepository,
+    required this.srsRepository,
   });
 
   final Lesson lesson;
   final ProgressRepository progressRepository;
+  final SrsRepository srsRepository;
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
@@ -25,6 +28,19 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Future<void> _onAnswered(bool correct) async {
     if (correct) _correctCount++;
+    final exercise = widget.lesson.exercises[_currentIndex];
+    for (final learningItemId in exercise.learningItemIds) {
+      try {
+        await widget.srsRepository.submitReviewResult(
+          learningItemId: learningItemId,
+          correct: correct,
+        );
+      } catch (_) {
+        // El scheduling SRS es una mejora de fondo; si falla, no debe
+        // bloquear que el usuario termine la lección (a diferencia de
+        // submitLessonResult más abajo, que sí es la señal de finalización).
+      }
+    }
     final isLast = _currentIndex == widget.lesson.exercises.length - 1;
     if (isLast) {
       final score = _correctCount / widget.lesson.exercises.length;

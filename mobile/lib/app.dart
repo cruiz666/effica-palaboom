@@ -4,6 +4,7 @@ import 'features/auth/login_screen.dart';
 import 'features/content/content_repository.dart';
 import 'features/course/course_screen.dart';
 import 'features/lesson/progress_repository.dart';
+import 'features/srs/srs_repository.dart';
 import 'theme/app_theme.dart';
 
 class App extends StatelessWidget {
@@ -12,11 +13,13 @@ class App extends StatelessWidget {
     required this.authRepository,
     required this.contentRepository,
     required this.progressRepository,
+    required this.srsRepository,
   });
 
   final AuthRepository authRepository;
   final ContentRepository contentRepository;
   final ProgressRepository progressRepository;
+  final SrsRepository srsRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +35,7 @@ class App extends StatelessWidget {
           return CourseScreen(
             contentRepository: contentRepository,
             progressRepository: progressRepository,
+            srsRepository: srsRepository,
           );
         },
       ),

@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:effica_palaboom/features/content/content_cache.dart';
 import 'package:effica_palaboom/features/content/content_remote_data_source.dart';
 import 'package:effica_palaboom/features/content/content_repository.dart';
+import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeRemoteDataSource implements ContentRemoteDataSource {
   @override
@@ -56,6 +58,21 @@ class FakeProgressRepository implements ProgressRepository {
   Future<void> submitLessonResult({required String lessonId, required double score}) async {}
 }
 
+class FakeSrsRepository implements SrsRepository {
+  final calls = <(String, bool)>[];
+
+  @override
+  Future<int> getDueCount() async => 0;
+
+  @override
+  Future<List<Exercise>> getDueExercises() async => const [];
+
+  @override
+  Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
+    calls.add((learningItemId, correct));
+  }
+}
+
 class ThrowingRemoteDataSource implements ContentRemoteDataSource {
   int callCount = 0;
 
@@ -77,6 +94,7 @@ void main() {
       home: CourseScreen(
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -102,6 +120,7 @@ void main() {
       home: CourseScreen(
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
       ),
     ));
     await tester.pumpAndSettle();

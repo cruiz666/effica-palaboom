@@ -3,16 +3,19 @@ import '../content/content_repository.dart';
 import '../content/models/course.dart';
 import '../lesson/lesson_screen.dart';
 import '../lesson/progress_repository.dart';
+import '../srs/srs_repository.dart';
 
 class CourseScreen extends StatefulWidget {
   const CourseScreen({
     super.key,
     required this.contentRepository,
     required this.progressRepository,
+    required this.srsRepository,
   });
 
   final ContentRepository contentRepository;
   final ProgressRepository progressRepository;
+  final SrsRepository srsRepository;
 
   @override
   State<CourseScreen> createState() => _CourseScreenState();
@@ -79,6 +82,7 @@ class _CourseScreenState extends State<CourseScreen> {
                         builder: (_) => LessonScreen(
                           lesson: lesson,
                           progressRepository: widget.progressRepository,
+                          srsRepository: widget.srsRepository,
                         ),
                       ),
                     ),
