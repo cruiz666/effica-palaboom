@@ -7,6 +7,7 @@ import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/srs/review_session_screen.dart';
 import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeRemoteDataSource implements ContentRemoteDataSource {
@@ -59,13 +60,15 @@ class FakeProgressRepository implements ProgressRepository {
 }
 
 class FakeSrsRepository implements SrsRepository {
+  FakeSrsRepository({this.due = const []});
   final calls = <(String, bool)>[];
+  final List<Exercise> due;
 
   @override
-  Future<int> getDueCount() async => 0;
+  Future<int> getDueCount() async => due.length;
 
   @override
-  Future<List<Exercise>> getDueExercises() async => const [];
+  Future<List<Exercise>> getDueExercises() async => due;
 
   @override
   Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
@@ -135,5 +138,36 @@ void main() {
 
     expect(dataSource.callCount, 2);
     expect(find.text('No se pudo cargar el curso.'), findsOneWidget);
+  });
+
+  testWidgets('shows the due count and navigates to ReviewSessionScreen on tap', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+    final dueExercise = const Exercise(
+      id: 'ex-due',
+      sortOrder: 1,
+      type: 'multiple_choice',
+      content: {'prompt': 'x', 'options': ['a']},
+      correctAnswer: 'a',
+      learningItemIds: ['li-1'],
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(due: [dueExercise]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 para repasar'), findsOneWidget);
+
+    await tester.tap(find.text('Repaso'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewSessionScreen), findsOneWidget);
   });
 }
