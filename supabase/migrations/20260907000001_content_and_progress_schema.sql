@@ -128,6 +128,7 @@ create or replace function get_active_course()
 returns jsonb
 language sql
 stable
+set search_path = ''
 as $$
   select jsonb_build_object(
     'id', c.id,
@@ -151,16 +152,16 @@ as $$
                 'content', e.content,
                 'correctAnswer', e.correct_answer
               ) order by e.sort_order)
-              from exercises e where e.lesson_id = l.id
+              from public.exercises e where e.lesson_id = l.id
             ), '[]'::jsonb)
           ) order by l.sort_order)
-          from lessons l where l.unit_id = u.id
+          from public.lessons l where l.unit_id = u.id
         ), '[]'::jsonb)
       ) order by u.sort_order)
-      from units u where u.course_id = c.id and u.status = 'published'
+      from public.units u where u.course_id = c.id and u.status = 'published'
     ), '[]'::jsonb)
   )
-  from courses c
+  from public.courses c
   where c.status = 'published'
   order by c.created_at
   limit 1;
