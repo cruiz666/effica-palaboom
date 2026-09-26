@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class NotAuthenticatedException implements Exception {}
+
 abstract class ProgressRepository {
   Future<void> submitLessonResult({required String lessonId, required double score});
 }
@@ -11,7 +13,11 @@ class SupabaseProgressRepository implements ProgressRepository {
 
   @override
   Future<void> submitLessonResult({required String lessonId, required double score}) async {
-    final userId = _client.auth.currentUser!.id;
+    final currentUser = _client.auth.currentUser;
+    if (currentUser == null) {
+      throw NotAuthenticatedException();
+    }
+    final userId = currentUser.id;
     await _client.from('user_lesson_progress').insert({
       'user_id': userId,
       'lesson_id': lessonId,
