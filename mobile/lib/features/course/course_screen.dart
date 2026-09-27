@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../content/content_repository.dart';
 import '../content/models/course.dart';
+import '../gamification/gamification_header.dart';
+import '../gamification/gamification_repository.dart';
+import '../gamification/gamification_state.dart';
 import '../lesson/lesson_screen.dart';
 import '../lesson/progress_repository.dart';
 import '../progress/progress_screen.dart';
@@ -15,12 +18,14 @@ class CourseScreen extends StatefulWidget {
     required this.progressRepository,
     required this.srsRepository,
     required this.progressSummaryRepository,
+    required this.gamificationRepository,
   });
 
   final ContentRepository contentRepository;
   final ProgressRepository progressRepository;
   final SrsRepository srsRepository;
   final ProgressSummaryRepository progressSummaryRepository;
+  final GamificationRepository gamificationRepository;
 
   @override
   State<CourseScreen> createState() => _CourseScreenState();
@@ -29,6 +34,7 @@ class CourseScreen extends StatefulWidget {
 class _CourseScreenState extends State<CourseScreen> {
   late Future<Course> _courseFuture = widget.contentRepository.getActiveCourse();
   late Future<int> _dueCountFuture = widget.srsRepository.getDueCount();
+  late Future<GamificationState> _gamificationStateFuture = widget.gamificationRepository.getState();
   bool _isOpeningReview = false;
 
   void _retry() {
@@ -90,6 +96,15 @@ class _CourseScreenState extends State<CourseScreen> {
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
           return ListView(
             children: [
+              FutureBuilder<GamificationState>(
+                future: _gamificationStateFuture,
+                builder: (context, gamificationSnapshot) {
+                  if (!gamificationSnapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  return GamificationHeader(state: gamificationSnapshot.data!);
+                },
+              ),
               FutureBuilder<int>(
                 future: _dueCountFuture,
                 builder: (context, dueSnapshot) {
@@ -120,12 +135,23 @@ class _CourseScreenState extends State<CourseScreen> {
                                     builder: (_) => ReviewSessionScreen(
                                       exercises: exercises,
                                       srsRepository: widget.srsRepository,
+                                      gamificationRepository: widget.gamificationRepository,
                                     ),
                                   ),
                                 );
                                 if (!context.mounted) return;
+                                final dueCountFuture = widget.srsRepository.getDueCount();
+                                final gamificationStateFuture =
+                                    widget.gamificationRepository.getState();
+                                // See _retry() above for why these futures are marked
+                                // as handled before setState: otherwise a rejection
+                                // that happens before the next FutureBuilder rebuild
+                                // subscribes would surface as an unhandled async error.
+                                dueCountFuture.ignore();
+                                gamificationStateFuture.ignore();
                                 setState(() {
-                                  _dueCountFuture = widget.srsRepository.getDueCount();
+                                  _dueCountFuture = dueCountFuture;
+                                  _gamificationStateFuture = gamificationStateFuture;
                                 });
                               } catch (_) {
                                 if (!context.mounted) return;
@@ -158,12 +184,23 @@ class _CourseScreenState extends State<CourseScreen> {
                             lesson: lesson,
                             progressRepository: widget.progressRepository,
                             srsRepository: widget.srsRepository,
+                            gamificationRepository: widget.gamificationRepository,
                           ),
                         ),
                       );
                       if (!context.mounted) return;
+                      final dueCountFuture = widget.srsRepository.getDueCount();
+                      final gamificationStateFuture =
+                          widget.gamificationRepository.getState();
+                      // See _retry() above for why these futures are marked as
+                      // handled before setState: otherwise a rejection that happens
+                      // before the next FutureBuilder rebuild subscribes would
+                      // surface as an unhandled async error.
+                      dueCountFuture.ignore();
+                      gamificationStateFuture.ignore();
                       setState(() {
-                        _dueCountFuture = widget.srsRepository.getDueCount();
+                        _dueCountFuture = dueCountFuture;
+                        _gamificationStateFuture = gamificationStateFuture;
                       });
                     },
                   ),

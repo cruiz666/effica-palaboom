@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../content/models/lesson.dart';
 import '../srs/srs_repository.dart';
+import '../gamification/gamification_repository.dart';
 import 'exercise_widget_factory.dart';
 import 'progress_repository.dart';
 
@@ -12,24 +13,35 @@ class LessonScreen extends StatefulWidget {
     required this.lesson,
     required this.progressRepository,
     required this.srsRepository,
+    required this.gamificationRepository,
   });
 
   final Lesson lesson;
   final ProgressRepository progressRepository;
   final SrsRepository srsRepository;
+  final GamificationRepository gamificationRepository;
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
 }
 
 class _LessonScreenState extends State<LessonScreen> {
+  static const _errorLimit = 3;
+
   int _currentIndex = 0;
   int _correctCount = 0;
+  int _incorrectCount = 0;
   bool _completed = false;
+  bool _limitReached = false;
   String? _errorMessage;
 
   Future<void> _onAnswered(bool correct) async {
-    if (correct) _correctCount++;
+    if (correct) {
+      _correctCount++;
+      unawaited(widget.gamificationRepository.awardXp(10).catchError((_) {}));
+    } else {
+      _incorrectCount++;
+    }
     final exercise = widget.lesson.exercises[_currentIndex];
     for (final learningItemId in exercise.learningItemIds) {
       // SRS scheduling is a background enhancement; a failure or slow
@@ -41,6 +53,13 @@ class _LessonScreenState extends State<LessonScreen> {
             .catchError((_) {}),
       );
     }
+
+    if (_incorrectCount >= _errorLimit) {
+      if (!mounted) return;
+      setState(() => _limitReached = true);
+      return;
+    }
+
     final isLast = _currentIndex == widget.lesson.exercises.length - 1;
     if (isLast) {
       final score = _correctCount / widget.lesson.exercises.length;
@@ -49,6 +68,7 @@ class _LessonScreenState extends State<LessonScreen> {
           lessonId: widget.lesson.id,
           score: score,
         );
+        unawaited(widget.gamificationRepository.recordActivity().catchError((_) {}));
         if (!mounted) return;
         setState(() {
           _errorMessage = null;
@@ -82,6 +102,25 @@ class _LessonScreenState extends State<LessonScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(widget.lesson.title)),
         body: Center(child: Text(_errorMessage!)),
+      );
+    }
+
+    if (_limitReached) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.lesson.title)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Alcanzaste el límite de errores para esta sesión.'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Volver al curso'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 

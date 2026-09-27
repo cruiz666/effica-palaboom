@@ -5,6 +5,7 @@ import 'features/auth/auth_repository.dart';
 import 'features/content/content_cache.dart';
 import 'features/content/content_remote_data_source.dart';
 import 'features/content/content_repository.dart';
+import 'features/gamification/gamification_repository.dart';
 import 'features/lesson/progress_repository.dart';
 import 'features/progress/progress_summary_repository.dart';
 import 'features/srs/srs_repository.dart';
@@ -34,5 +35,6 @@ Future<void> main() async {
     progressRepository: SupabaseProgressRepository(client),
     srsRepository: SupabaseSrsRepository(client),
     progressSummaryRepository: SupabaseProgressSummaryRepository(client),
+    gamificationRepository: SupabaseGamificationRepository(client),
   ));
 }
