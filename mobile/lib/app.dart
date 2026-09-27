@@ -3,6 +3,8 @@ import 'features/auth/auth_repository.dart';
 import 'features/auth/login_screen.dart';
 import 'features/content/content_repository.dart';
 import 'features/course/course_screen.dart';
+import 'features/entitlement/entitlement_repository.dart';
+import 'features/entitlement/purchase_gateway.dart';
 import 'features/gamification/gamification_repository.dart';
 import 'features/lesson/progress_repository.dart';
 import 'features/progress/progress_summary_repository.dart';
@@ -18,6 +20,8 @@ class App extends StatelessWidget {
     required this.srsRepository,
     required this.progressSummaryRepository,
     required this.gamificationRepository,
+    required this.entitlementRepository,
+    required this.purchaseGateway,
   });
 
   final AuthRepository authRepository;
@@ -26,6 +30,8 @@ class App extends StatelessWidget {
   final SrsRepository srsRepository;
   final ProgressSummaryRepository progressSummaryRepository;
   final GamificationRepository gamificationRepository;
+  final EntitlementRepository entitlementRepository;
+  final PurchaseGateway purchaseGateway;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +50,8 @@ class App extends StatelessWidget {
             srsRepository: srsRepository,
             progressSummaryRepository: progressSummaryRepository,
             gamificationRepository: gamificationRepository,
+            entitlementRepository: entitlementRepository,
+            purchaseGateway: purchaseGateway,
           );
         },
       ),

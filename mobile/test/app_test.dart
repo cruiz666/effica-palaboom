@@ -8,6 +8,9 @@ import 'package:effica_palaboom/features/content/content_remote_data_source.dart
 import 'package:effica_palaboom/features/content/content_repository.dart';
 import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
+import 'package:effica_palaboom/features/entitlement/entitlement_repository.dart';
+import 'package:effica_palaboom/features/entitlement/entitlement_state.dart';
+import 'package:effica_palaboom/features/entitlement/purchase_gateway.dart';
 import 'package:effica_palaboom/features/gamification/gamification_repository.dart';
 import 'package:effica_palaboom/features/gamification/gamification_state.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
@@ -85,6 +88,17 @@ class FakeGamificationRepository implements GamificationRepository {
   }
 }
 
+class FakeEntitlementRepository implements EntitlementRepository {
+  @override
+  Future<EntitlementState> getState() async =>
+      const EntitlementState(isPremium: false, freeLessonsUsedToday: 0, freeLessonsLimit: 3);
+}
+
+class FakePurchaseGateway implements PurchaseGateway {
+  @override
+  Future<bool> purchaseMonthly() async => true;
+}
+
 void main() {
   testWidgets('shows LoginScreen when signed out and CourseScreen when signed in', (tester) async {
     final authRepository = FakeAuthRepository();
@@ -99,6 +113,8 @@ void main() {
       srsRepository: FakeSrsRepository(),
       progressSummaryRepository: FakeProgressSummaryRepository(),
       gamificationRepository: FakeGamificationRepository(),
+      entitlementRepository: FakeEntitlementRepository(),
+      purchaseGateway: FakePurchaseGateway(),
     ));
 
     authRepository.emit(false);
