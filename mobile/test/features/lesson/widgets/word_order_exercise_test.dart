@@ -29,8 +29,35 @@ void main() {
     await tester.tap(find.text('Ana'));
     await tester.pump();
 
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Comprobar'));
+    await tester.pump();
+
     expect(result, true);
     expect(find.text('¡Correcto!'), findsOneWidget);
+  });
+
+  testWidgets('placing all words does not answer until Comprobar is tapped', (tester) async {
+    bool? result;
+    await tester.pumpWidget(MaterialApp(
+      home: WordOrderExercise(exercise: _exercise(), onAnswered: (r) => result = r),
+    ));
+
+    await tester.tap(find.text('My'));
+    await tester.pump();
+    await tester.tap(find.text('name'));
+    await tester.pump();
+    await tester.tap(find.text('is'));
+    await tester.pump();
+    await tester.tap(find.text('Ana'));
+    await tester.pump();
+
+    expect(result, null);
+    expect(find.widgetWithText(ElevatedButton, 'Comprobar'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Comprobar'));
+    await tester.pump();
+
+    expect(result, true);
   });
 
   testWidgets('tapping words in the wrong order reports false', (tester) async {
@@ -46,6 +73,9 @@ void main() {
     await tester.tap(find.text('Ana'));
     await tester.pump();
     await tester.tap(find.text('name'));
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Comprobar'));
     await tester.pump();
 
     expect(result, false);

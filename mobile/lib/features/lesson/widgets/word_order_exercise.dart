@@ -16,7 +16,7 @@ class WordOrderExercise extends StatefulWidget {
 }
 
 class _WordOrderExerciseState extends State<WordOrderExercise> {
-  late List<String> _available = List<String>.from(widget.exercise.content['words'] as List);
+  late final List<String> _available = List<String>.from(widget.exercise.content['words'] as List);
   final List<String> _selected = [];
   bool _answered = false;
 
@@ -25,11 +25,6 @@ class _WordOrderExerciseState extends State<WordOrderExercise> {
     setState(() {
       _selected.add(_available.removeAt(index));
     });
-    if (_selected.length == (widget.exercise.content['words'] as List).length) {
-      final correct = _selected.join(' ') == widget.exercise.correctAnswer;
-      setState(() => _answered = true);
-      widget.onAnswered(correct);
-    }
   }
 
   void _unselect(int index) {
@@ -39,8 +34,15 @@ class _WordOrderExerciseState extends State<WordOrderExercise> {
     });
   }
 
+  void _confirm() {
+    final correct = _selected.join(' ') == widget.exercise.correctAnswer;
+    setState(() => _answered = true);
+    widget.onAnswered(correct);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final allPlaced = _available.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -65,6 +67,13 @@ class _WordOrderExerciseState extends State<WordOrderExercise> {
               ),
           ],
         ),
+        if (!_answered) ...[
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: allPlaced ? _confirm : null,
+            child: const Text('Comprobar'),
+          ),
+        ],
         if (_answered)
           Text(_selected.join(' ') == widget.exercise.correctAnswer ? '¡Correcto!' : 'Incorrecto'),
       ],
