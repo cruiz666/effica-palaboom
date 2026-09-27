@@ -7,6 +7,9 @@ import 'package:effica_palaboom/features/lesson/progress_repository.dart';
 import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeSrsRepository implements SrsRepository {
+  FakeSrsRepository({this.shouldThrow = false});
+
+  final bool shouldThrow;
   final calls = <(String, bool)>[];
 
   @override
@@ -17,6 +20,9 @@ class FakeSrsRepository implements SrsRepository {
 
   @override
   Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
+    if (shouldThrow) {
+      throw Exception('SRS backend unavailable');
+    }
     calls.add((learningItemId, correct));
   }
 }
@@ -87,6 +93,24 @@ void main() {
       ('li-1', true),
       ('li-2', true),
     ]);
+  });
+
+  testWidgets(
+      'a throwing SRS repository never blocks or breaks lesson completion',
+      (tester) async {
+    final progressRepo = FakeProgressRepository();
+    final srsRepo = FakeSrsRepository(shouldThrow: true);
+    await tester.pumpWidget(MaterialApp(
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo),
+    ));
+
+    await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Goodbye'));
+    await tester.pumpAndSettle();
+
+    expect(progressRepo.lastLessonId, 'lesson-1');
+    expect(find.text('¡Lección completada!'), findsOneWidget);
   });
 
   testWidgets('opening a lesson with no exercises shows a friendly message instead of crashing',

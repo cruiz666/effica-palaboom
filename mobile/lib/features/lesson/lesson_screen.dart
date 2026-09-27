@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../content/models/lesson.dart';
 import '../srs/srs_repository.dart';
@@ -30,16 +32,14 @@ class _LessonScreenState extends State<LessonScreen> {
     if (correct) _correctCount++;
     final exercise = widget.lesson.exercises[_currentIndex];
     for (final learningItemId in exercise.learningItemIds) {
-      try {
-        await widget.srsRepository.submitReviewResult(
-          learningItemId: learningItemId,
-          correct: correct,
-        );
-      } catch (_) {
-        // El scheduling SRS es una mejora de fondo; si falla, no debe
-        // bloquear que el usuario termine la lección (a diferencia de
-        // submitLessonResult más abajo, que sí es la señal de finalización).
-      }
+      // SRS scheduling is a background enhancement; a failure or slow
+      // response here must not block the user from finishing the lesson
+      // (unlike submitLessonResult below, which is the completion signal).
+      unawaited(
+        widget.srsRepository
+            .submitReviewResult(learningItemId: learningItemId, correct: correct)
+            .catchError((_) {}),
+      );
     }
     final isLast = _currentIndex == widget.lesson.exercises.length - 1;
     if (isLast) {
