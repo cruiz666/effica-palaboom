@@ -63,12 +63,18 @@ class FakeProgressRepository implements ProgressRepository {
 }
 
 class FakeSrsRepository implements SrsRepository {
-  FakeSrsRepository({this.due = const []});
+  FakeSrsRepository({this.due = const [], this.throwOnDueCount = false});
   final calls = <(String, bool)>[];
   final List<Exercise> due;
+  final bool throwOnDueCount;
 
   @override
-  Future<int> getDueCount() async => due.length;
+  Future<int> getDueCount() async {
+    if (throwOnDueCount) {
+      throw Exception('RPC unavailable');
+    }
+    return due.length;
+  }
 
   @override
   Future<List<Exercise>> getDueExercises() async => due;
@@ -155,7 +161,7 @@ void main() {
       remoteDataSource: FakeRemoteDataSource(),
       cache: FakeContentCache(),
     );
-    final dueExercise = const Exercise(
+    const dueExercise = Exercise(
       id: 'ex-due',
       sortOrder: 1,
       type: 'multiple_choice',
@@ -180,6 +186,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReviewSessionScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'a due-count RPC failure shows an error message instead of the misleading '
+      '"Sin repasos pendientes hoy"', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(throwOnDueCount: true),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar el repaso.'), findsOneWidget);
+    expect(find.text('Sin repasos pendientes hoy'), findsNothing);
   });
 
   testWidgets('AppBar has a button that opens ProgressScreen', (tester) async {

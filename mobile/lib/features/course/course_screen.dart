@@ -28,7 +28,8 @@ class CourseScreen extends StatefulWidget {
 
 class _CourseScreenState extends State<CourseScreen> {
   late Future<Course> _courseFuture = widget.contentRepository.getActiveCourse();
-  late final Future<int> _dueCountFuture = widget.srsRepository.getDueCount();
+  late Future<int> _dueCountFuture = widget.srsRepository.getDueCount();
+  bool _isOpeningReview = false;
 
   void _retry() {
     final future = widget.contentRepository.getActiveCourse();
@@ -92,6 +93,14 @@ class _CourseScreenState extends State<CourseScreen> {
               FutureBuilder<int>(
                 future: _dueCountFuture,
                 builder: (context, dueSnapshot) {
+                  if (dueSnapshot.hasError) {
+                    return const Card(
+                      child: ListTile(
+                        title: Text('Repaso'),
+                        subtitle: Text('No se pudo cargar el repaso.'),
+                      ),
+                    );
+                  }
                   final dueCount = dueSnapshot.data ?? 0;
                   return Card(
                     child: ListTile(
@@ -99,19 +108,35 @@ class _CourseScreenState extends State<CourseScreen> {
                       subtitle: Text(
                         dueCount > 0 ? '$dueCount para repasar' : 'Sin repasos pendientes hoy',
                       ),
-                      onTap: dueCount == 0
+                      onTap: dueCount == 0 || _isOpeningReview
                           ? null
                           : () async {
-                              final exercises = await widget.srsRepository.getDueExercises();
-                              if (!context.mounted) return;
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ReviewSessionScreen(
-                                    exercises: exercises,
-                                    srsRepository: widget.srsRepository,
+                              setState(() => _isOpeningReview = true);
+                              try {
+                                final exercises = await widget.srsRepository.getDueExercises();
+                                if (!context.mounted) return;
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ReviewSessionScreen(
+                                      exercises: exercises,
+                                      srsRepository: widget.srsRepository,
+                                    ),
                                   ),
-                                ),
-                              );
+                                );
+                                if (!context.mounted) return;
+                                setState(() {
+                                  _dueCountFuture = widget.srsRepository.getDueCount();
+                                });
+                              } catch (_) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('No se pudo abrir el repaso. Intenta de nuevo.'),
+                                  ),
+                                );
+                              } finally {
+                                if (context.mounted) setState(() => _isOpeningReview = false);
+                              }
                             },
                     ),
                   );
@@ -126,15 +151,21 @@ class _CourseScreenState extends State<CourseScreen> {
                   ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)))
                   ListTile(
                     title: Text(lesson.title),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => LessonScreen(
-                          lesson: lesson,
-                          progressRepository: widget.progressRepository,
-                          srsRepository: widget.srsRepository,
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => LessonScreen(
+                            lesson: lesson,
+                            progressRepository: widget.progressRepository,
+                            srsRepository: widget.srsRepository,
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                      if (!context.mounted) return;
+                      setState(() {
+                        _dueCountFuture = widget.srsRepository.getDueCount();
+                      });
+                    },
                   ),
               ],
             ],
