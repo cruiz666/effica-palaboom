@@ -31,9 +31,10 @@ declare
   v_ease_factor numeric;
   v_repetitions int;
   v_interval_days int;
+  v_next_review_date date;
 begin
-  select ease_factor, repetitions, interval_days
-    into v_ease_factor, v_repetitions, v_interval_days
+  select ease_factor, repetitions, interval_days, next_review_date
+    into v_ease_factor, v_repetitions, v_interval_days, v_next_review_date
     from public.user_learning_item_progress
     where user_id = v_user_id and learning_item_id = p_learning_item_id;
 
@@ -41,6 +42,12 @@ begin
     v_ease_factor := 2.5;
     v_repetitions := 0;
     v_interval_days := 0;
+  elsif p_correct and v_next_review_date > current_date then
+    -- Practiced again before it was due: a correct answer here doesn't
+    -- teach us anything new about retention, so don't advance the
+    -- schedule. A failure still counts (see below) since forgetting early
+    -- is real signal regardless of whether it was "due".
+    return;
   end if;
 
   if p_correct then
