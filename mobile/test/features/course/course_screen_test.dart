@@ -5,6 +5,7 @@ import 'package:effica_palaboom/features/content/content_remote_data_source.dart
 import 'package:effica_palaboom/features/content/content_repository.dart';
 import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
+import 'package:effica_palaboom/features/gamification/gamification_header.dart';
 import 'package:effica_palaboom/features/gamification/gamification_repository.dart';
 import 'package:effica_palaboom/features/gamification/gamification_state.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
@@ -93,12 +94,13 @@ class FakeProgressSummaryRepository implements ProgressSummaryRepository {
 }
 
 class FakeGamificationRepository implements GamificationRepository {
+  FakeGamificationRepository({this.state = const GamificationState(xpTotal: 0, currentStreak: 0, longestStreak: 0, level: 1)});
+  final GamificationState state;
   final xpAwards = <int>[];
   bool activityRecorded = false;
 
   @override
-  Future<GamificationState> getState() async =>
-      const GamificationState(xpTotal: 0, currentStreak: 0, longestStreak: 0, level: 1);
+  Future<GamificationState> getState() async => state;
 
   @override
   Future<void> awardXp(int amount) async {
@@ -256,5 +258,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ProgressScreen), findsOneWidget);
+  });
+
+  testWidgets('shows the gamification header with real state', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+        gamificationRepository: FakeGamificationRepository(
+          state: const GamificationState(xpTotal: 50, currentStreak: 2, longestStreak: 4, level: 1),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(GamificationHeader), findsOneWidget);
+    expect(find.text('Racha: 2 días · 50 XP · Nivel 1'), findsOneWidget);
   });
 }

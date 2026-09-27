@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../content/content_repository.dart';
 import '../content/models/course.dart';
+import '../gamification/gamification_header.dart';
 import '../gamification/gamification_repository.dart';
+import '../gamification/gamification_state.dart';
 import '../lesson/lesson_screen.dart';
 import '../lesson/progress_repository.dart';
 import '../progress/progress_screen.dart';
@@ -32,6 +34,7 @@ class CourseScreen extends StatefulWidget {
 class _CourseScreenState extends State<CourseScreen> {
   late Future<Course> _courseFuture = widget.contentRepository.getActiveCourse();
   late Future<int> _dueCountFuture = widget.srsRepository.getDueCount();
+  late Future<GamificationState> _gamificationStateFuture = widget.gamificationRepository.getState();
   bool _isOpeningReview = false;
 
   void _retry() {
@@ -93,6 +96,15 @@ class _CourseScreenState extends State<CourseScreen> {
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
           return ListView(
             children: [
+              FutureBuilder<GamificationState>(
+                future: _gamificationStateFuture,
+                builder: (context, gamificationSnapshot) {
+                  if (!gamificationSnapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  return GamificationHeader(state: gamificationSnapshot.data!);
+                },
+              ),
               FutureBuilder<int>(
                 future: _dueCountFuture,
                 builder: (context, dueSnapshot) {
@@ -130,6 +142,7 @@ class _CourseScreenState extends State<CourseScreen> {
                                 if (!context.mounted) return;
                                 setState(() {
                                   _dueCountFuture = widget.srsRepository.getDueCount();
+                                  _gamificationStateFuture = widget.gamificationRepository.getState();
                                 });
                               } catch (_) {
                                 if (!context.mounted) return;
@@ -169,6 +182,7 @@ class _CourseScreenState extends State<CourseScreen> {
                       if (!context.mounted) return;
                       setState(() {
                         _dueCountFuture = widget.srsRepository.getDueCount();
+                        _gamificationStateFuture = widget.gamificationRepository.getState();
                       });
                     },
                   ),
