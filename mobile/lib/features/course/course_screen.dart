@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../content/content_repository.dart';
 import '../content/models/course.dart';
+import '../gamification/gamification_repository.dart';
 import '../lesson/lesson_screen.dart';
 import '../lesson/progress_repository.dart';
 import '../progress/progress_screen.dart';
@@ -15,12 +16,14 @@ class CourseScreen extends StatefulWidget {
     required this.progressRepository,
     required this.srsRepository,
     required this.progressSummaryRepository,
+    required this.gamificationRepository,
   });
 
   final ContentRepository contentRepository;
   final ProgressRepository progressRepository;
   final SrsRepository srsRepository;
   final ProgressSummaryRepository progressSummaryRepository;
+  final GamificationRepository gamificationRepository;
 
   @override
   State<CourseScreen> createState() => _CourseScreenState();
@@ -158,6 +161,7 @@ class _CourseScreenState extends State<CourseScreen> {
                             lesson: lesson,
                             progressRepository: widget.progressRepository,
                             srsRepository: widget.srsRepository,
+                            gamificationRepository: widget.gamificationRepository,
                           ),
                         ),
                       );

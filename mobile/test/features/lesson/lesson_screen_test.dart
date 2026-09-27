@@ -5,6 +5,27 @@ import 'package:effica_palaboom/features/content/models/lesson.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
 import 'package:effica_palaboom/features/srs/srs_repository.dart';
+import 'package:effica_palaboom/features/gamification/gamification_repository.dart';
+import 'package:effica_palaboom/features/gamification/gamification_state.dart';
+
+class FakeGamificationRepository implements GamificationRepository {
+  final xpAwards = <int>[];
+  bool activityRecorded = false;
+
+  @override
+  Future<GamificationState> getState() async =>
+      const GamificationState(xpTotal: 0, currentStreak: 0, longestStreak: 0, level: 1);
+
+  @override
+  Future<void> awardXp(int amount) async {
+    xpAwards.add(amount);
+  }
+
+  @override
+  Future<void> recordActivity() async {
+    activityRecorded = true;
+  }
+}
 
 class FakeSrsRepository implements SrsRepository {
   FakeSrsRepository({this.shouldThrow = false});
@@ -68,12 +89,25 @@ Lesson _lesson() => const Lesson(
       ],
     );
 
+Lesson _lessonForErrorLimit() => const Lesson(
+      id: 'lesson-limit',
+      title: 'Práctica larga',
+      sortOrder: 1,
+      exercises: [
+        Exercise(id: 'ex-1', sortOrder: 1, type: 'multiple_choice', content: {'prompt': 'p1', 'options': ['A', 'B']}, correctAnswer: 'A'),
+        Exercise(id: 'ex-2', sortOrder: 2, type: 'multiple_choice', content: {'prompt': 'p2', 'options': ['A', 'B']}, correctAnswer: 'A'),
+        Exercise(id: 'ex-3', sortOrder: 3, type: 'multiple_choice', content: {'prompt': 'p3', 'options': ['A', 'B']}, correctAnswer: 'A'),
+        Exercise(id: 'ex-4', sortOrder: 4, type: 'multiple_choice', content: {'prompt': 'p4', 'options': ['A', 'B']}, correctAnswer: 'A'),
+      ],
+    );
+
 void main() {
   testWidgets('completing all exercises submits the score and shows completion', (tester) async {
     final progressRepo = FakeProgressRepository();
     final srsRepo = FakeSrsRepository();
+    final gamificationRepo = FakeGamificationRepository();
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo),
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo, gamificationRepository: gamificationRepo),
     ));
 
     await tester.tap(find.text('Hello'));
@@ -93,6 +127,8 @@ void main() {
       ('li-1', true),
       ('li-2', true),
     ]);
+    expect(gamificationRepo.xpAwards, [10, 10]);
+    expect(gamificationRepo.activityRecorded, true);
   });
 
   testWidgets(
@@ -100,8 +136,9 @@ void main() {
       (tester) async {
     final progressRepo = FakeProgressRepository();
     final srsRepo = FakeSrsRepository(shouldThrow: true);
+    final gamificationRepo = FakeGamificationRepository();
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo),
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo, gamificationRepository: gamificationRepo),
     ));
 
     await tester.tap(find.text('Hello'));
@@ -123,7 +160,7 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: emptyLesson, progressRepository: FakeProgressRepository(), srsRepository: FakeSrsRepository()),
+      home: LessonScreen(lesson: emptyLesson, progressRepository: FakeProgressRepository(), srsRepository: FakeSrsRepository(), gamificationRepository: FakeGamificationRepository()),
     ));
     await tester.pumpAndSettle();
 
@@ -135,7 +172,7 @@ void main() {
       (tester) async {
     final progressRepo = FakeProgressRepository(shouldThrow: true);
     await tester.pumpWidget(MaterialApp(
-      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: FakeSrsRepository()),
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: FakeSrsRepository(), gamificationRepository: FakeGamificationRepository()),
     ));
 
     await tester.tap(find.text('Hello'));
@@ -145,5 +182,30 @@ void main() {
 
     expect(find.text('¡Lección completada!'), findsNothing);
     expect(find.text('No se pudo guardar tu progreso. Intenta de nuevo.'), findsOneWidget);
+  });
+
+  testWidgets('reaching the error limit ends the session before it completes', (tester) async {
+    final progressRepo = FakeProgressRepository();
+    final gamificationRepo = FakeGamificationRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: LessonScreen(
+        lesson: _lessonForErrorLimit(),
+        progressRepository: progressRepo,
+        srsRepository: FakeSrsRepository(),
+        gamificationRepository: gamificationRepo,
+      ),
+    ));
+
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Alcanzaste el límite de errores para esta sesión.'), findsOneWidget);
+    expect(find.text('p4'), findsNothing);
+    expect(progressRepo.lastLessonId, isNull);
+    expect(gamificationRepo.activityRecorded, false);
   });
 }

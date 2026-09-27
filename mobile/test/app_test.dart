@@ -8,6 +8,8 @@ import 'package:effica_palaboom/features/content/content_remote_data_source.dart
 import 'package:effica_palaboom/features/content/content_repository.dart';
 import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
+import 'package:effica_palaboom/features/gamification/gamification_repository.dart';
+import 'package:effica_palaboom/features/gamification/gamification_state.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
 import 'package:effica_palaboom/features/progress/progress_summary_repository.dart';
 import 'package:effica_palaboom/features/progress/unit_progress_summary.dart';
@@ -64,6 +66,25 @@ class FakeProgressSummaryRepository implements ProgressSummaryRepository {
   Future<List<UnitProgressSummary>> getUnitProgressSummaries() async => const [];
 }
 
+class FakeGamificationRepository implements GamificationRepository {
+  final xpAwards = <int>[];
+  bool activityRecorded = false;
+
+  @override
+  Future<GamificationState> getState() async =>
+      const GamificationState(xpTotal: 0, currentStreak: 0, longestStreak: 0, level: 1);
+
+  @override
+  Future<void> awardXp(int amount) async {
+    xpAwards.add(amount);
+  }
+
+  @override
+  Future<void> recordActivity() async {
+    activityRecorded = true;
+  }
+}
+
 void main() {
   testWidgets('shows LoginScreen when signed out and CourseScreen when signed in', (tester) async {
     final authRepository = FakeAuthRepository();
@@ -77,6 +98,7 @@ void main() {
       progressRepository: FakeProgressRepository(),
       srsRepository: FakeSrsRepository(),
       progressSummaryRepository: FakeProgressSummaryRepository(),
+      gamificationRepository: FakeGamificationRepository(),
     ));
 
     authRepository.emit(false);
