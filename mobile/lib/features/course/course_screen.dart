@@ -123,6 +123,7 @@ class _CourseScreenState extends State<CourseScreen> {
                                     builder: (_) => ReviewSessionScreen(
                                       exercises: exercises,
                                       srsRepository: widget.srsRepository,
+                                      gamificationRepository: widget.gamificationRepository,
                                     ),
                                   ),
                                 );
