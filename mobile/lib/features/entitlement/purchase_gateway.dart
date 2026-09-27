@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract class PurchaseGateway {
   Future<bool> purchaseMonthly();
+  Future<void> restorePurchases();
 }
 
 class MockPurchaseGateway implements PurchaseGateway {
@@ -16,6 +17,9 @@ class MockPurchaseGateway implements PurchaseGateway {
     await _client.rpc('dev_mock_activate_subscription');
     return true;
   }
+
+  @override
+  Future<void> restorePurchases() async {}
 }
 
 class RevenueCatPurchaseGateway implements PurchaseGateway {
@@ -42,5 +46,11 @@ class RevenueCatPurchaseGateway implements PurchaseGateway {
     } on PlatformException {
       return false;
     }
+  }
+
+  @override
+  Future<void> restorePurchases() async {
+    await _ensureConfigured();
+    await Purchases.restorePurchases();
   }
 }

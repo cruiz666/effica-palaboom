@@ -228,6 +228,13 @@ class _CourseScreenState extends State<CourseScreen> {
                                 _dueCountFuture = dueCountFuture;
                                 _gamificationStateFuture = gamificationStateFuture;
                               });
+                            } catch (_) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No se pudo abrir la lección. Intenta de nuevo.'),
+                                ),
+                              );
                             } finally {
                               if (context.mounted) setState(() => _isOpeningLesson = false);
                             }

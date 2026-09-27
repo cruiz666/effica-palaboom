@@ -27,7 +27,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
       _isPurchasing = true;
       _purchaseFailed = false;
     });
-    final success = await widget.purchaseGateway.purchaseMonthly();
+    bool success;
+    try {
+      success = await widget.purchaseGateway.purchaseMonthly();
+    } catch (_) {
+      success = false;
+    }
     if (!mounted) return;
     setState(() {
       _isPurchasing = false;

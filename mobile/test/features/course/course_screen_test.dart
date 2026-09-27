@@ -120,16 +120,26 @@ class FakeGamificationRepository implements GamificationRepository {
 class FakeEntitlementRepository implements EntitlementRepository {
   FakeEntitlementRepository({
     this.state = const EntitlementState(isPremium: false, freeLessonsUsedToday: 0, freeLessonsLimit: 3),
+    this.throwOnGetState = false,
   });
   final EntitlementState state;
+  final bool throwOnGetState;
 
   @override
-  Future<EntitlementState> getState() async => state;
+  Future<EntitlementState> getState() async {
+    if (throwOnGetState) {
+      throw Exception('entitlement check unavailable');
+    }
+    return state;
+  }
 }
 
 class FakePurchaseGateway implements PurchaseGateway {
   @override
   Future<bool> purchaseMonthly() async => true;
+
+  @override
+  Future<void> restorePurchases() async {}
 }
 
 class ThrowingRemoteDataSource implements ContentRemoteDataSource {
@@ -369,6 +379,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(LessonScreen), findsOneWidget);
+    expect(find.byType(PaywallScreen), findsNothing);
+  });
+
+  testWidgets(
+      'an entitlement-check failure shows an error message instead of silently doing '
+      'nothing when a lesson is tapped', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+        gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(throwOnGetState: true),
+        purchaseGateway: FakePurchaseGateway(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saludar y despedirse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo abrir la lección. Intenta de nuevo.'), findsOneWidget);
+    expect(find.byType(LessonScreen), findsNothing);
     expect(find.byType(PaywallScreen), findsNothing);
   });
 }

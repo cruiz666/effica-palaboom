@@ -4,6 +4,26 @@ const WEBHOOK_AUTHORIZATION = Deno.env.get("REVENUECAT_WEBHOOK_AUTHORIZATION") ?
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const encoder = new TextEncoder();
+  const bytesA = encoder.encode(a);
+  const bytesB = encoder.encode(b);
+  if (bytesA.length !== bytesB.length) {
+    // Still do a comparison of equal-length dummy data so the function
+    // takes similar time whether lengths match or not.
+    let dummy = 0;
+    for (let i = 0; i < bytesA.length; i++) dummy |= bytesA[i];
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < bytesA.length; i++) {
+    diff |= bytesA[i] ^ bytesB[i];
+  }
+  return diff === 0;
+}
+
 // Eventos de RevenueCat que cambian el estado de la suscripción. Cualquier
 // otro tipo de evento (ej. BILLING_ISSUE, PRODUCT_CHANGE) se acepta con 200
 // pero se ignora — no hay nada que este esquema simple necesite reflejar
@@ -28,7 +48,10 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  if (WEBHOOK_AUTHORIZATION === "" || req.headers.get("Authorization") !== WEBHOOK_AUTHORIZATION) {
+  if (
+    WEBHOOK_AUTHORIZATION === "" ||
+    !timingSafeEqual(req.headers.get("Authorization") ?? "", WEBHOOK_AUTHORIZATION)
+  ) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -42,6 +65,10 @@ Deno.serve(async (req) => {
   const event = body.event;
   if (!event || !event.app_user_id || !event.type) {
     return new Response("Malformed payload", { status: 400 });
+  }
+
+  if (!UUID_PATTERN.test(event.app_user_id)) {
+    return new Response("Invalid app_user_id", { status: 400 });
   }
 
   const status = statusForEventType(event.type);

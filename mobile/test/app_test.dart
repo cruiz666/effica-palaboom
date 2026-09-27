@@ -97,6 +97,9 @@ class FakeEntitlementRepository implements EntitlementRepository {
 class FakePurchaseGateway implements PurchaseGateway {
   @override
   Future<bool> purchaseMonthly() async => true;
+
+  @override
+  Future<void> restorePurchases() async {}
 }
 
 void main() {
