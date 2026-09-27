@@ -24,6 +24,7 @@ class FakeSrsRepository implements SrsRepository {
 }
 
 class FakeGamificationRepository implements GamificationRepository {
+  bool shouldThrow = false;
   final xpAwards = <int>[];
   bool activityRecorded = false;
 
@@ -33,11 +34,13 @@ class FakeGamificationRepository implements GamificationRepository {
 
   @override
   Future<void> awardXp(int amount) async {
+    if (shouldThrow) throw Exception('gamification backend unavailable');
     xpAwards.add(amount);
   }
 
   @override
   Future<void> recordActivity() async {
+    if (shouldThrow) throw Exception('gamification backend unavailable');
     activityRecorded = true;
   }
 }
@@ -79,6 +82,26 @@ void main() {
     expect(find.text('¡Repaso completado!'), findsOneWidget);
     expect(gamificationRepo.xpAwards, [10]);
     expect(gamificationRepo.activityRecorded, true);
+  });
+
+  testWidgets(
+      'a throwing gamification repository never blocks or breaks review completion',
+      (tester) async {
+    final repo = FakeSrsRepository();
+    final gamificationRepo = FakeGamificationRepository()..shouldThrow = true;
+    await tester.pumpWidget(MaterialApp(
+      home: ReviewSessionScreen(
+        exercises: _exercises(),
+        srsRepository: repo,
+        gamificationRepository: gamificationRepo,
+      ),
+    ));
+
+    await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, ['li-1']);
+    expect(find.text('¡Repaso completado!'), findsOneWidget);
   });
 
   testWidgets('shows an empty state when there is nothing due', (tester) async {

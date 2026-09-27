@@ -140,9 +140,18 @@ class _CourseScreenState extends State<CourseScreen> {
                                   ),
                                 );
                                 if (!context.mounted) return;
+                                final dueCountFuture = widget.srsRepository.getDueCount();
+                                final gamificationStateFuture =
+                                    widget.gamificationRepository.getState();
+                                // See _retry() above for why these futures are marked
+                                // as handled before setState: otherwise a rejection
+                                // that happens before the next FutureBuilder rebuild
+                                // subscribes would surface as an unhandled async error.
+                                dueCountFuture.ignore();
+                                gamificationStateFuture.ignore();
                                 setState(() {
-                                  _dueCountFuture = widget.srsRepository.getDueCount();
-                                  _gamificationStateFuture = widget.gamificationRepository.getState();
+                                  _dueCountFuture = dueCountFuture;
+                                  _gamificationStateFuture = gamificationStateFuture;
                                 });
                               } catch (_) {
                                 if (!context.mounted) return;
@@ -180,9 +189,18 @@ class _CourseScreenState extends State<CourseScreen> {
                         ),
                       );
                       if (!context.mounted) return;
+                      final dueCountFuture = widget.srsRepository.getDueCount();
+                      final gamificationStateFuture =
+                          widget.gamificationRepository.getState();
+                      // See _retry() above for why these futures are marked as
+                      // handled before setState: otherwise a rejection that happens
+                      // before the next FutureBuilder rebuild subscribes would
+                      // surface as an unhandled async error.
+                      dueCountFuture.ignore();
+                      gamificationStateFuture.ignore();
                       setState(() {
-                        _dueCountFuture = widget.srsRepository.getDueCount();
-                        _gamificationStateFuture = widget.gamificationRepository.getState();
+                        _dueCountFuture = dueCountFuture;
+                        _gamificationStateFuture = gamificationStateFuture;
                       });
                     },
                   ),

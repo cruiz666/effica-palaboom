@@ -9,6 +9,9 @@ import 'package:effica_palaboom/features/gamification/gamification_repository.da
 import 'package:effica_palaboom/features/gamification/gamification_state.dart';
 
 class FakeGamificationRepository implements GamificationRepository {
+  FakeGamificationRepository({this.shouldThrow = false});
+
+  final bool shouldThrow;
   final xpAwards = <int>[];
   bool activityRecorded = false;
 
@@ -18,11 +21,17 @@ class FakeGamificationRepository implements GamificationRepository {
 
   @override
   Future<void> awardXp(int amount) async {
+    if (shouldThrow) {
+      throw Exception('gamification backend unavailable');
+    }
     xpAwards.add(amount);
   }
 
   @override
   Future<void> recordActivity() async {
+    if (shouldThrow) {
+      throw Exception('gamification backend unavailable');
+    }
     activityRecorded = true;
   }
 }
@@ -137,6 +146,25 @@ void main() {
     final progressRepo = FakeProgressRepository();
     final srsRepo = FakeSrsRepository(shouldThrow: true);
     final gamificationRepo = FakeGamificationRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo, gamificationRepository: gamificationRepo),
+    ));
+
+    await tester.tap(find.text('Hello'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Goodbye'));
+    await tester.pumpAndSettle();
+
+    expect(progressRepo.lastLessonId, 'lesson-1');
+    expect(find.text('¡Lección completada!'), findsOneWidget);
+  });
+
+  testWidgets(
+      'a throwing gamification repository never blocks or breaks lesson completion',
+      (tester) async {
+    final progressRepo = FakeProgressRepository();
+    final srsRepo = FakeSrsRepository();
+    final gamificationRepo = FakeGamificationRepository(shouldThrow: true);
     await tester.pumpWidget(MaterialApp(
       home: LessonScreen(lesson: _lesson(), progressRepository: progressRepo, srsRepository: srsRepo, gamificationRepository: gamificationRepo),
     ));
