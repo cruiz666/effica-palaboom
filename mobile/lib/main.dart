@@ -6,6 +6,8 @@ import 'features/content/content_cache.dart';
 import 'features/content/content_remote_data_source.dart';
 import 'features/content/content_repository.dart';
 import 'features/lesson/progress_repository.dart';
+import 'features/progress/progress_summary_repository.dart';
+import 'features/srs/srs_repository.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -30,5 +32,7 @@ Future<void> main() async {
       cache: SharedPreferencesContentCache(),
     ),
     progressRepository: SupabaseProgressRepository(client),
+    srsRepository: SupabaseSrsRepository(client),
+    progressSummaryRepository: SupabaseProgressSummaryRepository(client),
   ));
 }

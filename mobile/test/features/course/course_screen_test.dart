@@ -3,9 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:effica_palaboom/features/content/content_cache.dart';
 import 'package:effica_palaboom/features/content/content_remote_data_source.dart';
 import 'package:effica_palaboom/features/content/content_repository.dart';
+import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
 import 'package:effica_palaboom/features/lesson/lesson_screen.dart';
 import 'package:effica_palaboom/features/lesson/progress_repository.dart';
+import 'package:effica_palaboom/features/progress/progress_screen.dart';
+import 'package:effica_palaboom/features/progress/progress_summary_repository.dart';
+import 'package:effica_palaboom/features/progress/unit_progress_summary.dart';
+import 'package:effica_palaboom/features/srs/review_session_screen.dart';
+import 'package:effica_palaboom/features/srs/srs_repository.dart';
 
 class FakeRemoteDataSource implements ContentRemoteDataSource {
   @override
@@ -56,6 +62,34 @@ class FakeProgressRepository implements ProgressRepository {
   Future<void> submitLessonResult({required String lessonId, required double score}) async {}
 }
 
+class FakeSrsRepository implements SrsRepository {
+  FakeSrsRepository({this.due = const [], this.throwOnDueCount = false});
+  final calls = <(String, bool)>[];
+  final List<Exercise> due;
+  final bool throwOnDueCount;
+
+  @override
+  Future<int> getDueCount() async {
+    if (throwOnDueCount) {
+      throw Exception('RPC unavailable');
+    }
+    return due.length;
+  }
+
+  @override
+  Future<List<Exercise>> getDueExercises() async => due;
+
+  @override
+  Future<void> submitReviewResult({required String learningItemId, required bool correct}) async {
+    calls.add((learningItemId, correct));
+  }
+}
+
+class FakeProgressSummaryRepository implements ProgressSummaryRepository {
+  @override
+  Future<List<UnitProgressSummary>> getUnitProgressSummaries() async => const [];
+}
+
 class ThrowingRemoteDataSource implements ContentRemoteDataSource {
   int callCount = 0;
 
@@ -77,6 +111,8 @@ void main() {
       home: CourseScreen(
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -102,6 +138,8 @@ void main() {
       home: CourseScreen(
         contentRepository: repository,
         progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -116,5 +154,81 @@ void main() {
 
     expect(dataSource.callCount, 2);
     expect(find.text('No se pudo cargar el curso.'), findsOneWidget);
+  });
+
+  testWidgets('shows the due count and navigates to ReviewSessionScreen on tap', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+    const dueExercise = Exercise(
+      id: 'ex-due',
+      sortOrder: 1,
+      type: 'multiple_choice',
+      content: {'prompt': 'x', 'options': ['a']},
+      correctAnswer: 'a',
+      learningItemIds: ['li-1'],
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(due: [dueExercise]),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 para repasar'), findsOneWidget);
+
+    await tester.tap(find.text('Repaso'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReviewSessionScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      'a due-count RPC failure shows an error message instead of the misleading '
+      '"Sin repasos pendientes hoy"', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(throwOnDueCount: true),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo cargar el repaso.'), findsOneWidget);
+    expect(find.text('Sin repasos pendientes hoy'), findsNothing);
+  });
+
+  testWidgets('AppBar has a button that opens ProgressScreen', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.bar_chart));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProgressScreen), findsOneWidget);
   });
 }

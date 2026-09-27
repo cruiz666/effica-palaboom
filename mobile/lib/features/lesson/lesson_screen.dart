@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../content/models/lesson.dart';
-import 'widgets/multiple_choice_exercise.dart';
+import '../srs/srs_repository.dart';
+import 'exercise_widget_factory.dart';
 import 'progress_repository.dart';
 
 class LessonScreen extends StatefulWidget {
@@ -8,10 +11,12 @@ class LessonScreen extends StatefulWidget {
     super.key,
     required this.lesson,
     required this.progressRepository,
+    required this.srsRepository,
   });
 
   final Lesson lesson;
   final ProgressRepository progressRepository;
+  final SrsRepository srsRepository;
 
   @override
   State<LessonScreen> createState() => _LessonScreenState();
@@ -25,6 +30,17 @@ class _LessonScreenState extends State<LessonScreen> {
 
   Future<void> _onAnswered(bool correct) async {
     if (correct) _correctCount++;
+    final exercise = widget.lesson.exercises[_currentIndex];
+    for (final learningItemId in exercise.learningItemIds) {
+      // SRS scheduling is a background enhancement; a failure or slow
+      // response here must not block the user from finishing the lesson
+      // (unlike submitLessonResult below, which is the completion signal).
+      unawaited(
+        widget.srsRepository
+            .submitReviewResult(learningItemId: learningItemId, correct: correct)
+            .catchError((_) {}),
+      );
+    }
     final isLast = _currentIndex == widget.lesson.exercises.length - 1;
     if (isLast) {
       final score = _correctCount / widget.lesson.exercises.length;
@@ -93,8 +109,7 @@ class _LessonScreenState extends State<LessonScreen> {
     final exercise = widget.lesson.exercises[_currentIndex];
     return Scaffold(
       appBar: AppBar(title: Text(widget.lesson.title)),
-      body: MultipleChoiceExercise(
-        key: ValueKey(exercise.id),
+      body: buildExerciseWidget(
         exercise: exercise,
         onAnswered: (correct) {
           _onAnswered(correct);
