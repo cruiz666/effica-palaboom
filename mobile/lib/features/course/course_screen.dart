@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../content/content_repository.dart';
 import '../content/models/course.dart';
+import '../entitlement/entitlement_repository.dart';
+import '../entitlement/paywall_screen.dart';
+import '../entitlement/purchase_gateway.dart';
 import '../gamification/gamification_header.dart';
 import '../gamification/gamification_repository.dart';
 import '../gamification/gamification_state.dart';
@@ -19,6 +22,8 @@ class CourseScreen extends StatefulWidget {
     required this.srsRepository,
     required this.progressSummaryRepository,
     required this.gamificationRepository,
+    required this.entitlementRepository,
+    required this.purchaseGateway,
   });
 
   final ContentRepository contentRepository;
@@ -26,6 +31,8 @@ class CourseScreen extends StatefulWidget {
   final SrsRepository srsRepository;
   final ProgressSummaryRepository progressSummaryRepository;
   final GamificationRepository gamificationRepository;
+  final EntitlementRepository entitlementRepository;
+  final PurchaseGateway purchaseGateway;
 
   @override
   State<CourseScreen> createState() => _CourseScreenState();
@@ -36,6 +43,7 @@ class _CourseScreenState extends State<CourseScreen> {
   late Future<int> _dueCountFuture = widget.srsRepository.getDueCount();
   late Future<GamificationState> _gamificationStateFuture = widget.gamificationRepository.getState();
   bool _isOpeningReview = false;
+  bool _isOpeningLesson = false;
 
   void _retry() {
     final future = widget.contentRepository.getActiveCourse();
@@ -123,7 +131,7 @@ class _CourseScreenState extends State<CourseScreen> {
                       subtitle: Text(
                         dueCount > 0 ? '$dueCount para repasar' : 'Sin repasos pendientes hoy',
                       ),
-                      onTap: dueCount == 0 || _isOpeningReview
+                      onTap: dueCount == 0 || _isOpeningReview || _isOpeningLesson
                           ? null
                           : () async {
                               setState(() => _isOpeningReview = true);
@@ -177,32 +185,60 @@ class _CourseScreenState extends State<CourseScreen> {
                   ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder)))
                   ListTile(
                     title: Text(lesson.title),
-                    onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => LessonScreen(
-                            lesson: lesson,
-                            progressRepository: widget.progressRepository,
-                            srsRepository: widget.srsRepository,
-                            gamificationRepository: widget.gamificationRepository,
-                          ),
-                        ),
-                      );
-                      if (!context.mounted) return;
-                      final dueCountFuture = widget.srsRepository.getDueCount();
-                      final gamificationStateFuture =
-                          widget.gamificationRepository.getState();
-                      // See _retry() above for why these futures are marked as
-                      // handled before setState: otherwise a rejection that happens
-                      // before the next FutureBuilder rebuild subscribes would
-                      // surface as an unhandled async error.
-                      dueCountFuture.ignore();
-                      gamificationStateFuture.ignore();
-                      setState(() {
-                        _dueCountFuture = dueCountFuture;
-                        _gamificationStateFuture = gamificationStateFuture;
-                      });
-                    },
+                    onTap: _isOpeningReview || _isOpeningLesson
+                        ? null
+                        : () async {
+                            setState(() => _isOpeningLesson = true);
+                            try {
+                              final entitlement = await widget.entitlementRepository.getState();
+                              if (!context.mounted) return;
+                              if (entitlement.limitReached) {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => PaywallScreen(
+                                      freeLessonsUsedToday: entitlement.freeLessonsUsedToday,
+                                      freeLessonsLimit: entitlement.freeLessonsLimit,
+                                      purchaseGateway: widget.purchaseGateway,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => LessonScreen(
+                                      lesson: lesson,
+                                      progressRepository: widget.progressRepository,
+                                      srsRepository: widget.srsRepository,
+                                      gamificationRepository: widget.gamificationRepository,
+                                    ),
+                                  ),
+                                );
+                              }
+                              if (!context.mounted) return;
+                              final dueCountFuture = widget.srsRepository.getDueCount();
+                              final gamificationStateFuture =
+                                  widget.gamificationRepository.getState();
+                              // See _retry() above for why these futures are marked as
+                              // handled before setState: otherwise a rejection that happens
+                              // before the next FutureBuilder rebuild subscribes would
+                              // surface as an unhandled async error.
+                              dueCountFuture.ignore();
+                              gamificationStateFuture.ignore();
+                              setState(() {
+                                _dueCountFuture = dueCountFuture;
+                                _gamificationStateFuture = gamificationStateFuture;
+                              });
+                            } catch (_) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('No se pudo abrir la lección. Intenta de nuevo.'),
+                                ),
+                              );
+                            } finally {
+                              if (context.mounted) setState(() => _isOpeningLesson = false);
+                            }
+                          },
                   ),
               ],
             ],

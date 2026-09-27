@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
@@ -5,6 +6,8 @@ import 'features/auth/auth_repository.dart';
 import 'features/content/content_cache.dart';
 import 'features/content/content_remote_data_source.dart';
 import 'features/content/content_repository.dart';
+import 'features/entitlement/entitlement_repository.dart';
+import 'features/entitlement/purchase_gateway.dart';
 import 'features/gamification/gamification_repository.dart';
 import 'features/lesson/progress_repository.dart';
 import 'features/progress/progress_summary_repository.dart';
@@ -12,6 +15,7 @@ import 'features/srs/srs_repository.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+const _revenueCatApiKey = String.fromEnvironment('REVENUECAT_API_KEY');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +30,9 @@ Future<void> main() async {
     anonKey: _supabaseAnonKey,
   );
   final client = Supabase.instance.client;
+  final purchaseGateway = kIsWeb
+      ? MockPurchaseGateway(client)
+      : RevenueCatPurchaseGateway(apiKey: _revenueCatApiKey);
   runApp(App(
     authRepository: SupabaseAuthRepository(client),
     contentRepository: ContentRepository(
@@ -36,5 +43,7 @@ Future<void> main() async {
     srsRepository: SupabaseSrsRepository(client),
     progressSummaryRepository: SupabaseProgressSummaryRepository(client),
     gamificationRepository: SupabaseGamificationRepository(client),
+    entitlementRepository: SupabaseEntitlementRepository(client),
+    purchaseGateway: purchaseGateway,
   ));
 }

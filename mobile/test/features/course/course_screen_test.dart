@@ -5,6 +5,10 @@ import 'package:effica_palaboom/features/content/content_remote_data_source.dart
 import 'package:effica_palaboom/features/content/content_repository.dart';
 import 'package:effica_palaboom/features/content/models/exercise.dart';
 import 'package:effica_palaboom/features/course/course_screen.dart';
+import 'package:effica_palaboom/features/entitlement/entitlement_repository.dart';
+import 'package:effica_palaboom/features/entitlement/entitlement_state.dart';
+import 'package:effica_palaboom/features/entitlement/paywall_screen.dart';
+import 'package:effica_palaboom/features/entitlement/purchase_gateway.dart';
 import 'package:effica_palaboom/features/gamification/gamification_header.dart';
 import 'package:effica_palaboom/features/gamification/gamification_repository.dart';
 import 'package:effica_palaboom/features/gamification/gamification_state.dart';
@@ -113,6 +117,31 @@ class FakeGamificationRepository implements GamificationRepository {
   }
 }
 
+class FakeEntitlementRepository implements EntitlementRepository {
+  FakeEntitlementRepository({
+    this.state = const EntitlementState(isPremium: false, freeLessonsUsedToday: 0, freeLessonsLimit: 3),
+    this.throwOnGetState = false,
+  });
+  final EntitlementState state;
+  final bool throwOnGetState;
+
+  @override
+  Future<EntitlementState> getState() async {
+    if (throwOnGetState) {
+      throw Exception('entitlement check unavailable');
+    }
+    return state;
+  }
+}
+
+class FakePurchaseGateway implements PurchaseGateway {
+  @override
+  Future<bool> purchaseMonthly() async => true;
+
+  @override
+  Future<void> restorePurchases() async {}
+}
+
 class ThrowingRemoteDataSource implements ContentRemoteDataSource {
   int callCount = 0;
 
@@ -137,6 +166,8 @@ void main() {
         srsRepository: FakeSrsRepository(),
         progressSummaryRepository: FakeProgressSummaryRepository(),
         gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -165,6 +196,8 @@ void main() {
         srsRepository: FakeSrsRepository(),
         progressSummaryRepository: FakeProgressSummaryRepository(),
         gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -202,6 +235,8 @@ void main() {
         srsRepository: FakeSrsRepository(due: [dueExercise]),
         progressSummaryRepository: FakeProgressSummaryRepository(),
         gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -229,6 +264,8 @@ void main() {
         srsRepository: FakeSrsRepository(throwOnDueCount: true),
         progressSummaryRepository: FakeProgressSummaryRepository(),
         gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -250,6 +287,8 @@ void main() {
         srsRepository: FakeSrsRepository(),
         progressSummaryRepository: FakeProgressSummaryRepository(),
         gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -275,11 +314,100 @@ void main() {
         gamificationRepository: FakeGamificationRepository(
           state: const GamificationState(xpTotal: 50, currentStreak: 2, longestStreak: 4, level: 1),
         ),
+        entitlementRepository: FakeEntitlementRepository(),
+        purchaseGateway: FakePurchaseGateway(),
       ),
     ));
     await tester.pumpAndSettle();
 
     expect(find.byType(GamificationHeader), findsOneWidget);
     expect(find.text('Racha: 2 días · 50 XP · Nivel 1'), findsOneWidget);
+  });
+
+  testWidgets('opens PaywallScreen instead of LessonScreen when the daily limit is reached',
+      (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+        gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(
+          state: const EntitlementState(isPremium: false, freeLessonsUsedToday: 3, freeLessonsLimit: 3),
+        ),
+        purchaseGateway: FakePurchaseGateway(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saludar y despedirse'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PaywallScreen), findsOneWidget);
+    expect(find.byType(LessonScreen), findsNothing);
+  });
+
+  testWidgets('opens LessonScreen even past the daily limit when the user is premium',
+      (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+        gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(
+          state: const EntitlementState(isPremium: true, freeLessonsUsedToday: 5, freeLessonsLimit: 3),
+        ),
+        purchaseGateway: FakePurchaseGateway(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saludar y despedirse'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LessonScreen), findsOneWidget);
+    expect(find.byType(PaywallScreen), findsNothing);
+  });
+
+  testWidgets(
+      'an entitlement-check failure shows an error message instead of silently doing '
+      'nothing when a lesson is tapped', (tester) async {
+    final repository = ContentRepository(
+      remoteDataSource: FakeRemoteDataSource(),
+      cache: FakeContentCache(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: CourseScreen(
+        contentRepository: repository,
+        progressRepository: FakeProgressRepository(),
+        srsRepository: FakeSrsRepository(),
+        progressSummaryRepository: FakeProgressSummaryRepository(),
+        gamificationRepository: FakeGamificationRepository(),
+        entitlementRepository: FakeEntitlementRepository(throwOnGetState: true),
+        purchaseGateway: FakePurchaseGateway(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Saludar y despedirse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo abrir la lección. Intenta de nuevo.'), findsOneWidget);
+    expect(find.byType(LessonScreen), findsNothing);
+    expect(find.byType(PaywallScreen), findsNothing);
   });
 }
